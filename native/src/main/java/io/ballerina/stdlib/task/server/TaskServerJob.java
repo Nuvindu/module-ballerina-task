@@ -1,22 +1,4 @@
-/*
- *  Copyright (c) 2019 WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
- *
- *  WSO2 Inc. licenses this file to you under the Apache License,
- *  Version 2.0 (the "License"); you may not use this file except
- *  in compliance with the License.
- *  You may obtain a copy of the License at
- *
- *  http://www.apache.org/licenses/LICENSE-2.0
- *
- *  Unless required by applicable law or agreed to in writing,
- *  software distributed under the License is distributed on an
- *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- *  KIND, either express or implied.  See the License for the
- *  specific language governing permissions and limitations
- *  under the License.
- */
-
-package io.ballerina.stdlib.task.utils;
+package io.ballerina.stdlib.task.server;
 
 import io.ballerina.runtime.api.Runtime;
 import io.ballerina.runtime.api.concurrent.StrandMetadata;
@@ -28,6 +10,8 @@ import io.ballerina.runtime.api.values.BObject;
 import io.ballerina.runtime.api.values.BString;
 import io.ballerina.stdlib.task.DatabaseConfig;
 import io.ballerina.stdlib.task.objects.TaskManager;
+import io.ballerina.stdlib.task.utils.TaskConstants;
+import io.ballerina.stdlib.task.utils.Utils;
 import org.quartz.Job;
 import org.quartz.JobExecutionContext;
 
@@ -44,14 +28,11 @@ import static io.ballerina.stdlib.task.objects.TaskManager.LIVENESS_INTERVAL;
 import static io.ballerina.stdlib.task.objects.TaskManager.TOKEN_HOLDER;
 import static io.ballerina.stdlib.task.utils.Utils.handleRollback;
 
-/**
- * Represents a Quartz job related to an appointment.
- */
-public class TaskJob implements Job {
+public class TaskServerJob implements Job {
 
     public static final String GROUP_ID = "groupId";
 
-    public TaskJob() {
+    public TaskServerJob() {
     }
 
     @Override
@@ -69,13 +50,13 @@ public class TaskJob implements Job {
             String groupId = ((BString) jobExecutionContext.getMergedJobDataMap().get(GROUP_ID)).getValue();
             String jdbcUrl = getJdbcUrl(dbConfig);
             processJobWithCoordination(job, runtime, jobExecutionContext, isTokenHolder,
-                                       taskId, groupId, jdbcUrl, dbConfig);
+                    taskId, groupId, jdbcUrl, dbConfig);
         });
     }
 
     private void  processJobWithCoordination(BObject job, Runtime runtime, JobExecutionContext jobExecutionContext,
-                                            boolean isTokenHolder, String taskId, String groupId,
-                                            String jdbcUrl, DatabaseConfig dbConfig) {
+                                             boolean isTokenHolder, String taskId, String groupId,
+                                             String jdbcUrl, DatabaseConfig dbConfig) {
         Connection connection = null;
         boolean deadStatus = false;
         try {
@@ -87,7 +68,7 @@ public class TaskJob implements Job {
             if (!deadStatus) {
                 connection.setAutoCommit(false);
                 boolean shouldExecuteJob = checkAndUpdateTokenStatus(connection, jobExecutionContext, taskId,
-                                                                     groupId, isTokenHolder, dbConfig);
+                        groupId, isTokenHolder, dbConfig);
                 connection.commit();
                 if (shouldExecuteJob) {
                     executeJob(job, runtime, jobExecutionContext);
@@ -112,7 +93,7 @@ public class TaskJob implements Job {
         }
         int livenessInterval = (int) jobExecutionContext.getMergedJobDataMap().get(LIVENESS_INTERVAL);
         return attemptTokenAcquisition(connection, taskId, groupId, false,
-                                       livenessInterval, dbConfig.dbType());
+                livenessInterval, dbConfig.dbType());
     }
 
     private void handleExecutionException(Connection connection,
@@ -128,9 +109,9 @@ public class TaskJob implements Job {
     private void executeJob(BObject job, Runtime runtime, JobExecutionContext jobExecutionContext) {
         try {
             ObjectType objectType = (ObjectType) job.getOriginalType();
-            boolean isConcurrentSafe = objectType.isIsolated() && objectType.isIsolated(TaskConstants.EXECUTE);
-            StrandMetadata metadata = new StrandMetadata(isConcurrentSafe, null);
-            runtime.callMethod(job, TaskConstants.EXECUTE, metadata);
+//            boolean isConcurrentSafe = objectType.isIsolated() && objectType.isIsolated(TaskConstants.EXECUTE);
+            StrandMetadata metadata = new StrandMetadata(true, null);
+            runtime.callMethod(job, TaskConstants.ON_TRIGGER, metadata);
         } catch (BError error) {
             Utils.notifyFailure(jobExecutionContext, error);
         } catch (Throwable t) {

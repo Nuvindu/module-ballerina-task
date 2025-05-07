@@ -212,6 +212,44 @@ public type WarmBackupConfig record {
     int heartbeatFrequency = 1;
 };
 
+# Worker count for the global scheduler
+public configurable int globalSchedulerWorkerCount = 5;
+
+# Waiting time for the global scheduler
+public configurable time:Seconds globalSchedulerWaitingTime = 5;
+
+# Listener configuration.
+# 
+# + schedule - The schedule configuration for the listener
+# + warmBackupConfig - The configuration related to task coordination
+public type ListenerConfiguration record {
+    OneTimeConfiguration|RecurringConfiguration schedule;
+    WarmBackupConfig? warmBackupConfig = ();
+};
+
+# Recurring schedule configuration.
+# 
+# + interval - The duration of the trigger (in seconds), which is used to run the job frequently
+# + maxCount - The maximum number of trigger counts
+# + startTime - The trigger start time in Ballerina `time:Civil`. If it is not provided, a trigger will
+#               start immediately
+# + endTime - The trigger end time in Ballerina `time:Civil`
+# + taskPolicy - The policy, which is used to handle the error and will be waiting during the trigger time
+public type RecurringConfiguration record {|
+    decimal interval;
+    int maxCount = -1;
+    time:Civil startTime?;
+    time:Civil endTime?;
+    TaskPolicy taskPolicy = {};
+|};
+
+# One-time schedule configuration.
+# 
+# + triggerTime - The specific time in Ballerina `time:Civil` to trigger only one time
+public type OneTimeConfiguration record {|
+    int triggerTime;
+|};
+
 # Gets time in milliseconds of the given `time:Civil`.
 #
 # + time - The Ballerina `time:Civil`
