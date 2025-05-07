@@ -36,13 +36,13 @@ public final class HealthCheckScheduler {
     private static final ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
     private static final ExecutorService virtualThreadExecutor = Executors.newVirtualThreadPerTaskExecutor();
 
-    public static final String POSTGRESQL_HEALTH_CHECK_QUERY = "INSERT INTO health_check(task_id, group_id, " +
-            "last_heartbeat) VALUES (?, ?, CURRENT_TIMESTAMP) ON CONFLICT (task_id, group_id) DO UPDATE " +
-            "SET last_heartbeat = EXCLUDED.last_heartbeat";
+    public static final String POSTGRESQL_HEALTH_CHECK_QUERY =
+            "INSERT INTO health_check(task_id, group_id, last_heartbeat) VALUES (?, ?, CURRENT_TIMESTAMP) " +
+            "ON CONFLICT (task_id, group_id) DO UPDATE SET last_heartbeat = EXCLUDED.last_heartbeat";
 
     public static final String MYSQL_HEALTH_CHECK_QUERY =
             "INSERT INTO health_check(task_id, group_id, last_heartbeat) " +
-            "VALUES (?, ?, CURRENT_TIMESTAMP) ON DUPLICATE KEY UPDATE last_heartbeat = CURRENT_TIMESTAMP;";
+            "VALUES (?, ?, CURRENT_TIMESTAMP) ON DUPLICATE KEY UPDATE last_heartbeat = CURRENT_TIMESTAMP";
 
     private HealthCheckScheduler() { }
 
@@ -66,7 +66,7 @@ public final class HealthCheckScheduler {
             try {
                 connection.setAutoCommit(false);
                 PreparedStatement stmt = connection.prepareStatement(DB_TYPE_MYSQL.equals(dbConfig.dbType())
-                ? MYSQL_HEALTH_CHECK_QUERY : POSTGRESQL_HEALTH_CHECK_QUERY);
+                    ? MYSQL_HEALTH_CHECK_QUERY : POSTGRESQL_HEALTH_CHECK_QUERY);
                 stmt.setString(1, tokenId);
                 stmt.setString(2, groupId);
                 stmt.executeUpdate();
